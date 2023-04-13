@@ -1,0 +1,288 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class Save_and_load_system : MonoBehaviour
+{
+    public int lvlId;  //номер уровня
+    public static float[] Position = new float[2]; //позиция игрока
+    public static float Health;    //кол-во жизней
+    public static string[] Cell_saver = new string[21];     //ячейки инвентаря
+    public SpriteRenderer[] ColorOfObjs;                 //объекты с изменяемыми цветами
+    public GameObject[] Destroyable;                //Собранные объекты на карте
+    private int[] DestroyableHelper;                //Вспомогательный к Destroyable
+    public GameObject[] doors;                      //Заперта или нет дверь
+    private int[] doorsHelper;                      //Вспомогательный к doors
+    public int autoSaved;
+    public static int lvlCount = 4;
+    public static bool isLoaded = false;              //переменная для загрузки уровней
+
+    public void Save()  //Сохранение
+    {
+        AutoSave2();
+        PlayerPrefs.SetInt("lvlId", lvlId);  //Сохранение номера уровня
+
+        Position[0] = transform.position.x;     //Получение позиций игрока
+        Position[1] = transform.position.y;
+        PlayerPrefs.SetFloat("PosX", Position[0]);       //Сохранение позиций игрока
+        PlayerPrefs.SetFloat("PosY", Position[1]);
+
+        Health = HP.Health;                //Получение кол-ва жизней
+        PlayerPrefs.SetFloat("Health", Health);   //Сохранение кол-ва жизней
+
+        Cell_saver = ForCells.Cell_saver;       //Получнеие массива ячеек инвентаря
+        for (byte i = 0; i < 21; i++)             //Сохранение массива ячеек инвентаря
+            PlayerPrefs.SetString("Cell"+Convert.ToString(i+1), Cell_saver[i]);
+
+        for (byte k = 0; k<ColorOfObjs.Length; k++)         //Сохранение цветов изменяемых объектов
+            PlayerPrefs.SetFloat("Color" + Convert.ToString(k), ColorOfObjs[k].color.a);
+
+        DestroyableHelper = new int[Destroyable.Length];        //Кол-во элементов списка
+        for (int i = 0; i < Destroyable.Length; i++)            //Получение текущего списка собранных предметов и их сохранение
+        {
+            if (Destroyable[i] == null)
+                DestroyableHelper[i] = 0;
+            else
+                DestroyableHelper[i] = 1;
+            PlayerPrefs.SetInt("Destroy" + Convert.ToString(i), DestroyableHelper[i]);
+        }
+
+        doorsHelper = new int[doors.Length];                    //Кол-во элементов списка
+        for(int i = 0; i<doors.Length; i++)                 //Получение открытых дверей и их сохранение
+        {
+            if (doors[i].GetComponent<Password>().Openned == true)
+                doorsHelper[i] = 1;
+            PlayerPrefs.SetInt("Door" + Convert.ToString(i), doorsHelper[i]);
+        }
+
+
+        for(int i = 0; i<lvlCount; i++)
+            PlayerPrefs.SetInt("autoSaved_" + Convert.ToString(i) + "_2", PlayerPrefs.GetInt("autoSaved_" + Convert.ToString(i)));
+
+        PlayerPrefs.Save();            //Сохранение всего
+
+        print("Saved");       //ненужное говно
+    }
+
+    public void AutoSave()
+    {
+        Position[0] = transform.position.x;     //Получение позиций игрока
+        Position[1] = transform.position.y;
+        PlayerPrefs.SetFloat("PosX_auto_"+Convert.ToString(lvlId), Position[0]);       //Сохранение позиций игрока
+        PlayerPrefs.SetFloat("PosY_auto_"+Convert.ToString(lvlId), Position[1]);
+
+        for (byte k = 0; k < ColorOfObjs.Length; k++)         //Сохранение цветов изменяемых объектов
+            PlayerPrefs.SetFloat("Color" + Convert.ToString(k) + "_auto_" + Convert.ToString(lvlId), ColorOfObjs[k].color.a);
+
+        DestroyableHelper = new int[Destroyable.Length];        //Кол-во элементов списка подобранных предметов
+        for (int i = 0; i < Destroyable.Length; i++)            //Получение текущего списка собранных предметов и их сохранение
+        {
+            if (Destroyable[i] == null)
+                DestroyableHelper[i] = 0;
+            else
+                DestroyableHelper[i] = 1;
+            PlayerPrefs.SetInt("Destroy" + Convert.ToString(i) + "_auto_" + Convert.ToString(lvlId), DestroyableHelper[i]);
+        }
+
+        doorsHelper = new int[doors.Length];                    //Кол-во элементов списка открытых дверей
+        for (int i = 0; i < doors.Length; i++)                 //Получение открытых дверей и их сохранение
+        {
+            if (doors[i].GetComponent<Password>().Openned == true)
+                doorsHelper[i] = 1;
+            PlayerPrefs.SetInt("Door" + Convert.ToString(i) + "_auto_" + Convert.ToString(lvlId), doorsHelper[i]);
+        }
+
+        autoSaved = 1;
+        PlayerPrefs.SetInt("autoSaved_" + Convert.ToString(lvlId), autoSaved);
+
+        PlayerPrefs.Save();
+
+        print("AutoSaved");
+    }
+
+    public void AutoSave2()
+    {
+        for(int l = 0; l<lvlCount; l++)
+        {
+            if(PlayerPrefs.HasKey("PosX_auto_" + Convert.ToString(l)))
+            {
+                PlayerPrefs.SetFloat("PosX_auto_" + Convert.ToString(l) + "_2", PlayerPrefs.GetFloat("PosX_auto_" + Convert.ToString(l)));       //Сохранение позиций игрока
+                PlayerPrefs.SetFloat("PosY_auto_" + Convert.ToString(l) + "_2", PlayerPrefs.GetFloat("PosY_auto_" + Convert.ToString(l)));
+
+                for (byte k = 0; k < ColorOfObjs.Length; k++)         //Сохранение цветов изменяемых объектов
+                    PlayerPrefs.SetFloat("Color" + Convert.ToString(k) + "_auto_" + Convert.ToString(l) + "_2", PlayerPrefs.GetFloat("Color" + Convert.ToString(k) + "_auto_" + Convert.ToString(l)));
+
+                DestroyableHelper = new int[Destroyable.Length];        //Кол-во элементов списка подобранных предметов
+                for (int i = 0; i < Destroyable.Length; i++)            //Получение текущего списка собранных предметов и их сохранение
+                {
+                    if (Destroyable[i] == null)
+                        DestroyableHelper[i] = 0;
+                    else
+                        DestroyableHelper[i] = 1;
+                    PlayerPrefs.SetInt("Destroy" + Convert.ToString(i) + "_auto_" + Convert.ToString(l) + "_2", PlayerPrefs.GetInt("Destroy" + Convert.ToString(i) + "_auto_" + Convert.ToString(l)));
+                }
+
+                doorsHelper = new int[doors.Length];                    //Кол-во элементов списка открытых дверей
+                for (int i = 0; i < doors.Length; i++)                 //Получение открытых дверей и их сохранение
+                {
+                    if (doors[i].GetComponent<Password>().Openned == true)
+                        doorsHelper[i] = 1;
+                    PlayerPrefs.SetInt("Door" + Convert.ToString(i) + "_auto_" + Convert.ToString(l) + "_2", PlayerPrefs.GetInt("Door" + Convert.ToString(i) + "_auto_" + Convert.ToString(l)));
+                }
+
+                PlayerPrefs.Save();
+            }
+        }
+    }
+
+    public void AutoLoad()
+    {
+        for (int l = 0; l < lvlCount; l++)
+        {
+            if(PlayerPrefs.HasKey("PosX_auto_" + Convert.ToString(l) + "_2"))
+            {
+                PlayerPrefs.SetFloat("PosX_auto_" + Convert.ToString(l), PlayerPrefs.GetFloat("PosX_auto_" + Convert.ToString(l) + "_2"));       //Сохранение позиций игрока
+                PlayerPrefs.SetFloat("PosY_auto_" + Convert.ToString(l), PlayerPrefs.GetFloat("PosY_auto_" + Convert.ToString(l) + "_2"));
+
+                for (byte k = 0; k < ColorOfObjs.Length; k++)         //Сохранение цветов изменяемых объектов
+                    PlayerPrefs.SetFloat("Color" + Convert.ToString(k) + "_auto_" + Convert.ToString(l), PlayerPrefs.GetFloat("Color" + Convert.ToString(k) + "_auto_" + Convert.ToString(l) + "_2"));
+
+                DestroyableHelper = new int[Destroyable.Length];        //Кол-во элементов списка подобранных предметов
+                for (int i = 0; i < Destroyable.Length; i++)            //Получение текущего списка собранных предметов и их сохранение
+                {
+                    if (Destroyable[i] == null)
+                        DestroyableHelper[i] = 0;
+                    else
+                        DestroyableHelper[i] = 1;
+                    PlayerPrefs.SetInt("Destroy" + Convert.ToString(i) + "_auto_" + Convert.ToString(l), PlayerPrefs.GetInt("Destroy" + Convert.ToString(i) + "_auto_" + Convert.ToString(l) + "_2"));
+                }
+
+                doorsHelper = new int[doors.Length];                    //Кол-во элементов списка открытых дверей
+                for (int i = 0; i < doors.Length; i++)                 //Получение открытых дверей и их сохранение
+                {
+                    if (doors[i].GetComponent<Password>().Openned == true)
+                        doorsHelper[i] = 1;
+                    PlayerPrefs.SetInt("Door" + Convert.ToString(i) + "_auto_" + Convert.ToString(l), PlayerPrefs.GetInt("Door" + Convert.ToString(i) + "_auto_" + Convert.ToString(l) + "_2"));
+                }
+
+
+                PlayerPrefs.Save();
+            }
+        }
+    }
+
+    public void Load()           //Загрузка
+    {
+        if (PlayerPrefs.HasKey("lvlId"))         //Если есть файл сохранения, то он загрузится
+        {
+            AutoSave();
+            AutoLoad();
+            lvlId = PlayerPrefs.GetInt("lvlId");       //Получение номера уровня
+
+            Position[0] = PlayerPrefs.GetFloat("PosX");                //Получение позиций игрока
+            Position[1] = PlayerPrefs.GetFloat("PosY");
+
+            Health = PlayerPrefs.GetFloat("Health");                    //Получение кол-ва жизней
+
+            for (int j = 0; j < 21; j++)                    //Получение ячеек инвентаря
+                Cell_saver[j] = PlayerPrefs.GetString("Cell" + Convert.ToString(j + 1));
+
+            for (int i = 0; i < lvlCount; i++)
+                PlayerPrefs.SetInt("autoSaved_" + Convert.ToString(i), PlayerPrefs.GetInt("autoSaved_" + Convert.ToString(i) + "_2"));
+
+            SceneManager.LoadScene(lvlId);          //Загрузка уровня по полученному номеру(lvlId)
+
+            isLoaded = true;               //Установление истинности переменной для работы void Start
+        }
+        else                    //Если файла с сохранением нет, идёшь в жопу
+            print("Fuck you!");
+    }
+
+    void Start()
+    {
+        if (isLoaded)      //Установление загруженных переменных на уровне, если уровень был загружен
+        {
+            transform.position = new Vector2(Position[0], Position[1]);         //Установление позиций
+
+            HP.Health = Health;             //Установление кол-ва жизней
+
+            ForCells.Cell_saver = Cell_saver;           //Установление ячеек
+
+            for (byte l = 0; l < ColorOfObjs.Length; l++)            //Загрузка цветов изменённых объектов
+            {
+                var colorHelper = ColorOfObjs[l].color;
+                colorHelper.a = PlayerPrefs.GetFloat("Color" + Convert.ToString(l));
+                ColorOfObjs[l].color = colorHelper;
+            }
+
+            DestroyableHelper = new int[Destroyable.Length];            //Получение длинны списка
+            for (int i = 0; i<Destroyable.Length; i++)              //Получение собранных элементов и их удаление
+            {
+                DestroyableHelper[i] = PlayerPrefs.GetInt("Destroy" + Convert.ToString(i));
+                print(DestroyableHelper[i]);
+                if (DestroyableHelper[i] == 0)
+                    Destroy(Destroyable[i]);
+            }
+
+            doorsHelper = new int[doors.Length];            //Длинна списка
+            for(int i = 0; i<doors.Length; i++)             //Получение кол-ва открытых дверей и их загрузка
+            {
+                doorsHelper[i] = PlayerPrefs.GetInt("Door" + Convert.ToString(i));
+                if (doorsHelper[i] == 1)
+                    doors[i].GetComponent<Password>().Openned = true;
+            }
+
+            Time.timeScale = 1;             //Установление времени на 1 на случай, если время при сохранении стояло на паузе
+
+            isLoaded = false;           //Установление ложности переменной для корректного перехода между уровнями (не при загрузке сохранения)
+        }
+        else
+        {
+            if (PlayerPrefs.HasKey("autoSaved_" + Convert.ToString(lvlId)))
+                autoSaved = PlayerPrefs.GetInt("autoSaved_" + Convert.ToString(lvlId));
+            if (autoSaved == 1)
+            {
+                Position[0] = PlayerPrefs.GetFloat("PosX_auto_" + Convert.ToString(lvlId));                //Получение позиций игрока
+                Position[1] = PlayerPrefs.GetFloat("PosY" + Convert.ToString(lvlId));
+
+                transform.position = new Vector2(Position[0], Position[1]);         //Установление позиций
+
+                for (byte l = 0; l < ColorOfObjs.Length; l++)            //Загрузка цветов изменённых объектов
+                {
+                    var colorHelper = ColorOfObjs[l].color;
+                    colorHelper.a = PlayerPrefs.GetFloat("Color" + Convert.ToString(l) + "_auto_" + Convert.ToString(lvlId));
+                    ColorOfObjs[l].color = colorHelper;
+                }
+
+                DestroyableHelper = new int[Destroyable.Length];            //Получение длинны списка
+                for (int i = 0; i < Destroyable.Length; i++)              //Получение собранных элементов и их удаление
+                {
+                    DestroyableHelper[i] = PlayerPrefs.GetInt("Destroy" + Convert.ToString(i) + "_auto_" + Convert.ToString(lvlId));
+                    print(DestroyableHelper[i]);
+                    if (DestroyableHelper[i] == 0)
+                        Destroy(Destroyable[i]);
+                }
+
+                doorsHelper = new int[doors.Length];            //Длинна списка
+                for (int i = 0; i < doors.Length; i++)             //Получение кол-ва открытых дверей и их загрузка
+                {
+                    doorsHelper[i] = PlayerPrefs.GetInt("Door" + Convert.ToString(i) + "_auto_" + Convert.ToString(lvlId));
+                    if (doorsHelper[i] == 1)
+                        doors[i].GetComponent<Password>().Openned = true;
+                }
+
+                autoSaved = 0;
+                PlayerPrefs.SetInt("autoSaved_" + Convert.ToString(lvlId), autoSaved);
+                PlayerPrefs.Save();
+            }
+            if (lvlId == 0 & PlayerPrefs.HasKey("Cell1"));
+            {
+                for (int j = 0; j < 21; j++)                    //Получение ячеек инвентаря
+                    Cell_saver[j] = PlayerPrefs.GetString("Cell" + Convert.ToString(j + 1));
+                ForCells.Cell_saver = Cell_saver;
+            }
+        }
+    }
+}
